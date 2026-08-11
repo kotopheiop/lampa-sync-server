@@ -7,7 +7,7 @@ import (
 
 // FavoriteKeys is the ordered list of Lampa favorite arrays.
 var FavoriteKeys = []string{
-	"card", "like", "watch", "book", "history",
+	"card", "like", "watch", "wath", "book", "history",
 	"look", "viewed", "scheduled", "continued", "thrown",
 }
 
@@ -72,6 +72,10 @@ func NormalizeFavoriteObject(favorite map[string]interface{}) map[string]interfa
 	for _, key := range FavoriteKeys {
 		out[key] = NormalizeArray(favorite[key])
 	}
+	// Lampa uses "wath"; keep watch↔wath mirrored
+	mirrored := NormalizeArray(append(AsSlice(favorite["wath"]), AsSlice(favorite["watch"])...))
+	out["wath"] = mirrored
+	out["watch"] = mirrored
 	if u, ok := favorite["updated"]; ok {
 		out["updated"] = u
 	}
