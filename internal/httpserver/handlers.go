@@ -271,6 +271,10 @@ func (s *Server) handleFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Favorite["updated"] = time.Now().UTC().Format(time.RFC3339Nano)
 
+	inHist := len(store.AsSlice(req.Favorite["history"]))
+	inBook := len(store.AsSlice(req.Favorite["book"]))
+	log.Printf("FAVORITE_POST mode=%s ip=%s history=%d book=%d", req.Mode, clientIP(r), inHist, inBook)
+
 	var saved map[string]interface{}
 	err = s.store.WithLock(func() error {
 		fav := req.Favorite
