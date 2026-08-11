@@ -85,6 +85,42 @@ internal/version/        # версия /ping
 Плагин ставится отдельно из [lampa-sync](https://github.com/kotopheiop/lampa-sync) (GitHub Pages).  
 В настройках клиента: URL этого сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
 
+## Логи и fail2ban
+
+Клиентский IP: `X-Real-IP` → первый `X-Forwarded-For` → `RemoteAddr`.
+
+Access-лог:
+```text
+[…] GET /sync ip=1.2.3.4 -> 401 (2ms)
+```
+
+При 401 (без пароля/токена в логе):
+```text
+AUTH_FAIL ip=1.2.3.4 method=GET path=/ping reason=missing_token
+AUTH_FAIL ip=1.2.3.4 method=GET path=/ping reason=invalid_token
+```
+
+Пример jail (лог контейнера / journal / файл — куда пишете stdout приложения):
+
+```ini
+[lampa-sync]
+enabled  = true
+filter   = lampa-sync
+logpath  = /var/log/lampa-sync/access.log
+maxretry = 10
+findtime = 10m
+bantime  = 1h
+```
+
+`/etc/fail2ban/filter.d/lampa-sync.conf`:
+```ini
+[Definition]
+failregex = AUTH_FAIL ip=<HOST>
+ignoreregex =
+```
+
+Опционально в nginx — отдельный `access_log` только для этого `server`/`location`, банить по `status=401` не трогая остальные сайты.
+
 ## Доступ с телефона (WSL2 + Windows)
 
 ```text

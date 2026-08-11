@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -26,9 +27,9 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &statusWriter{ResponseWriter: w, code: http.StatusOK}
 		next.ServeHTTP(rw, r)
-		log.Printf("[%s] %s %s -> %d (%dms)",
+		log.Printf("[%s] %s %s ip=%s -> %d (%dms)",
 			time.Now().UTC().Format(time.RFC3339Nano),
-			r.Method, r.URL.RequestURI(), rw.code, time.Since(start).Milliseconds())
+			r.Method, r.URL.RequestURI(), clientIP(r), rw.code, time.Since(start).Milliseconds())
 	})
 }
 
@@ -46,6 +47,7 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if !strings.HasPrefix(auth, "Bearer ") {
+			logAuthFail(r, "missing_token")
 			writeJSON(w, http.StatusUnauthorized, map[string]string{
 				"error": "Unauthorized: Missing Authorization Bearer token",
 			})
@@ -59,6 +61,7 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		token := strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
 		if token != s.cfg.AuthToken {
+			logAuthFail(r, "invalid_token")
 			writeJSON(w, http.StatusUnauthorized, map[string]string{
 				"error": "Unauthorized: Invalid token",
 			})
@@ -66,4 +69,37 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+// logAuthFail writes a stable line for fail2ban (no token/password).
+func logAuthFail(r *http.Request, reason string) {
+	log.Printf("AUTH_FAIL ip=%s method=%s path=%s reason=%s",
+		clientIP(r), r.Method, r.URL.Path, reason)
+}
+
+// clientIP: X-Real-IP → first X-Forwarded-For → RemoteAddr (host only).
+func clientIP(r *http.Request) string {
+	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
+		return stripHostPort(ip)
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			xff = xff[:i]
+		}
+		if ip := strings.TrimSpace(xff); ip != "" {
+			return stripHostPort(ip)
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil && host != "" {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+func stripHostPort(ip string) string {
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		return host
+	}
+	return ip
 }
