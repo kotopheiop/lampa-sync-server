@@ -144,3 +144,58 @@ func TestInvalidProgressJSONBackedUp(t *testing.T) {
 		t.Fatal("expected backup file")
 	}
 }
+
+func TestUnlockedHelpersAndEmptyFiles(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "progress.json"), []byte("   \n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "favorite.json"), []byte("\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err = st.WithLock(func() error {
+		p, e := st.ReadProgressUnlocked()
+		if e != nil {
+			return e
+		}
+		if len(p) != 0 {
+			t.Fatalf("%v", p)
+		}
+		p["1"] = map[string]interface{}{"time": float64(1), "percent": float64(1)}
+		if e := st.WriteProgressUnlocked(p); e != nil {
+			return e
+		}
+		f, e := st.ReadFavoriteUnlocked()
+		if e != nil {
+			return e
+		}
+		f["history"] = []interface{}{float64(1)}
+		_, e = st.WriteFavoriteUnlocked(f)
+		return e
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := st.ReadProgress()
+	if err != nil || len(got) != 1 {
+		t.Fatalf("%v %v", got, err)
+	}
+}
+
+func TestFindProgressSkipsNonObject(t *testing.T) {
+	progress := map[string]interface{}{
+		"x": "nope",
+		"2": map[string]interface{}{
+			"file_mapping": map[string]interface{}{"f": float64(2)},
+		},
+	}
+	tmdb, _, ok := store.FindProgressByFileID(progress, "f")
+	if !ok || tmdb != "2" {
+		t.Fatalf("%q %v", tmdb, ok)
+	}
+}

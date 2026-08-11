@@ -1,7 +1,7 @@
 # Lampa Sync Server (Go)
 
-Сервер синхронизации прогресса и избранного для [Lampa](https://github.com/yumata/lampa).  
-Написан на **Go** (stdlib HTTP, без фреймворков), плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync).
+Сервер синхронизации прогресса просмотра и избранного между устройствами.  
+Написан на **Go** (stdlib HTTP, без фреймворков). Клиентский плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync).
 
 ## Docker (рекомендуется)
 
@@ -43,13 +43,13 @@ go test ./... -cover
 
 | Пакет | Coverage |
 |-------|----------|
-| `internal/config` | ~88% |
-| `internal/store` | ~72% |
-| `internal/httpserver` | ~69% |
-| **всего по модулю** | **~70%** |
+| `internal/config` | ~94% |
+| `internal/store` | ~88% |
+| `internal/httpserver` | ~81% |
+| **всего по модулю** | **~83%** |
 
-`cmd/` и `version` почти без логики — в покрытие почти не входят.  
-Проверяются: `.env`/config, merge favorite, правила progress (same/other device), миграция legacy favorite, HTTP auth/CORS, `/health` `/ping` `/sync` `/progress` `/favorite` `/plugin.js`.
+`cmd/` — только `main`, в покрытие почти не входит.  
+Покрыты: config/`.env`, merge favorite, правила progress, миграция legacy favorite, HTTP auth/CORS и все основные эндпоинты.
 
 ## Структура
 
@@ -69,7 +69,7 @@ public/plugin.js         # раздача плагина
 | GET | `/health` | нет | живость |
 | GET | `/ping` | да | auth + счётчики |
 | GET | `/sync` | да | favorite + весь progress |
-| GET | `/progress?tmdb=` | да | прогресс одного фильма |
+| GET | `/progress?tmdb=` | да | прогресс одной карточки |
 | POST | `/progress` | да | сохранить time/percent/file_id |
 | POST | `/favorite` | да | заменить глобальный favorite |
 | GET | `/plugin.js` | нет | раздача плагина |
@@ -82,7 +82,7 @@ public/plugin.js         # раздача плагина
 ## Плагин
 
 Положи `plugin.js` в `public/plugin.js` (в образе уже есть копия).  
-В Lampa: URL сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
+В клиенте: URL сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
 
 ## Доступ с телефона (WSL2 + Windows)
 

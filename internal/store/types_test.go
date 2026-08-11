@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/kotopheiop/lampa-sync-server/internal/store"
 )
@@ -54,6 +55,34 @@ func TestMergeFavoriteUnions(t *testing.T) {
 	}
 }
 
+func TestMergeFavoriteNilSides(t *testing.T) {
+	a := store.NormalizeFavoriteObject(map[string]interface{}{
+		"history": []interface{}{float64(1)},
+	})
+	if got := store.MergeFavorite(nil, a); len(store.AsSlice(got["history"])) != 1 {
+		t.Fatalf("%#v", got)
+	}
+	if got := store.MergeFavorite(a, nil); len(store.AsSlice(got["history"])) != 1 {
+		t.Fatalf("%#v", got)
+	}
+}
+
+func TestNormalizeArrayTmdbIDAndNonArray(t *testing.T) {
+	out := store.NormalizeArray([]interface{}{
+		map[string]interface{}{"tmdb_id": float64(9)},
+		true,
+	})
+	if len(out) != 2 {
+		t.Fatalf("%#v", out)
+	}
+	if store.NormalizeArray(nil) == nil {
+		t.Fatal("want empty slice")
+	}
+	if len(store.NormalizeArray("x")) != 0 {
+		t.Fatal("non-array -> empty")
+	}
+}
+
 func TestApplyProgressUpdateSameDeviceOverwrites(t *testing.T) {
 	existing := map[string]interface{}{
 		"time":      float64(100),
@@ -91,6 +120,29 @@ func TestApplyProgressUpdateDifferentDeviceTakesMax(t *testing.T) {
 	}
 }
 
+func TestApplyProgressUpdateRecentConflictTakesMax(t *testing.T) {
+	existing := map[string]interface{}{
+		"time":      float64(100),
+		"percent":   float64(40),
+		"updated":   time.Now().UTC().Format(time.RFC3339Nano),
+		"device_id": nil,
+	}
+	out := store.ApplyProgressUpdate(existing, float64(1), 20, 50, "f", nil)
+	if store.NumOr(out["time"], 0) != 100 {
+		t.Fatalf("time=%v", out["time"])
+	}
+	if store.NumOr(out["percent"], 0) != 50 {
+		t.Fatalf("percent=%v", out["percent"])
+	}
+}
+
+func TestApplyProgressUpdateNilExisting(t *testing.T) {
+	out := store.ApplyProgressUpdate(nil, float64(7), 1, 2, "f", "d")
+	if store.NumOr(out["time"], 0) != 1 || store.StringifyID(out["device_id"]) != "d" {
+		t.Fatalf("%#v", out)
+	}
+}
+
 func TestFindProgressByFileID(t *testing.T) {
 	progress := map[string]interface{}{
 		"550": map[string]interface{}{
@@ -116,6 +168,45 @@ func TestStringifyID(t *testing.T) {
 	}
 	if store.StringifyID("x") != "x" {
 		t.Fatal(store.StringifyID("x"))
+	}
+	if store.StringifyID(nil) != "" {
+		t.Fatal("nil")
+	}
+	if store.StringifyID(float64(1.5)) != "1.5" {
+		t.Fatal(store.StringifyID(float64(1.5)))
+	}
+	if store.StringifyID(42) != "42" {
+		t.Fatal(store.StringifyID(42))
+	}
+}
+
+func TestNumOrAndHelpers(t *testing.T) {
+	if store.NumOr(float64(3), 0) != 3 {
+		t.Fatal()
+	}
+	if store.NumOr(float32(2), 0) != 2 {
+		t.Fatal()
+	}
+	if store.NumOr(int(4), 0) != 4 {
+		t.Fatal()
+	}
+	if store.NumOr(int64(5), 0) != 5 {
+		t.Fatal()
+	}
+	if store.NumOr("6.5", 0) != 6.5 {
+		t.Fatal()
+	}
+	if store.NumOr("bad", 9) != 9 {
+		t.Fatal()
+	}
+	if store.MaxFloat(1, 2) != 2 || store.MaxFloat(3, 1) != 3 {
+		t.Fatal()
+	}
+	if store.AsSlice(nil) == nil || len(store.MapOrEmpty(nil)) != 0 {
+		t.Fatal()
+	}
+	if store.NormalizeFavoriteObject(nil)["history"] == nil {
+		t.Fatal()
 	}
 }
 

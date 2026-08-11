@@ -174,3 +174,77 @@ func TestProgressValidation(t *testing.T) {
 		t.Fatalf("code=%d", code)
 	}
 }
+
+func TestMethodNotAllowedAndNotFound(t *testing.T) {
+	h := newTestServer(t, "pass")
+	cases := []struct {
+		method, path string
+		want         int
+	}{
+		{http.MethodPost, "/health", 405},
+		{http.MethodPost, "/ping", 405},
+		{http.MethodPost, "/sync", 405},
+		{http.MethodDelete, "/progress", 405},
+		{http.MethodGet, "/favorite", 405},
+		{http.MethodPost, "/plugin.js", 405},
+		{http.MethodGet, "/progress", 400},
+		{http.MethodGet, "/progress?tmdb=missing", 404},
+	}
+	for _, tc := range cases {
+		code, _ := doJSON(t, h, tc.method, tc.path, "pass", nil)
+		if code != tc.want {
+			t.Fatalf("%s %s -> %d want %d", tc.method, tc.path, code, tc.want)
+		}
+	}
+}
+
+func TestFavoriteValidationAndEmptyAuth(t *testing.T) {
+	h := newTestServer(t, "pass")
+	code, _ := doJSON(t, h, http.MethodPost, "/favorite", "pass", map[string]interface{}{
+		"favorite": nil,
+	})
+	if code != 400 {
+		t.Fatalf("code=%d", code)
+	}
+
+	empty := newTestServer(t, "")
+	code, out := doJSON(t, empty, http.MethodGet, "/ping", "anything", nil)
+	if code != 500 {
+		t.Fatalf("%d %#v", code, out)
+	}
+}
+
+func TestPluginMissing(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Init(); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{
+		DataDir:     dir,
+		AuthToken:   "pass",
+		PluginPaths: []string{filepath.Join(dir, "nope.js")},
+	}
+	h := httpserver.New(cfg, st).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/plugin.js", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != 404 {
+		t.Fatalf("code=%d", rr.Code)
+	}
+}
+
+func TestProgressMissingTMDB(t *testing.T) {
+	h := newTestServer(t, "pass")
+	code, _ := doJSON(t, h, http.MethodPost, "/progress", "pass", map[string]interface{}{
+		"time":    1,
+		"percent": 1,
+	})
+	if code != 400 {
+		t.Fatalf("code=%d", code)
+	}
+}
+
