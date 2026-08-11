@@ -20,6 +20,8 @@ docker compose up -d --build
 
 Порт на хосте меняется через `HOST_PORT` в `.env` (внутри контейнера всегда `3000`).
 
+Образ ~80 MB (Alpine + системный Node вместо `node:*-alpine` ~140 MB), multi-stage сборка.
+
 Остановить: `docker compose down`
 
 ## Без Docker

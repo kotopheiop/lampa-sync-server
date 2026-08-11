@@ -1,18 +1,18 @@
-# ---- build: install production deps ----
+# ---- deps: install production node_modules ----
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
-# ---- runtime: slim image ----
-FROM node:20-alpine AS runner
+# ---- runtime: Alpine + системный Node (~50MB вместо ~120MB) ----
+FROM alpine:3.21 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
     PORT=3000 \
     DATA_DIR=/app/data
 
-RUN apk add --no-cache su-exec \
+RUN apk add --no-cache nodejs su-exec \
  && addgroup -S apps && adduser -S apps -G apps
 
 COPY --from=deps /app/node_modules ./node_modules
