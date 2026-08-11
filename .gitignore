@@ -5,7 +5,7 @@ favorite.json
 data/
 *.backup.*
 .DS_Store
-lampa-sync-server
+/lampa-sync-server
 *.exe
 node_modules/
 package.json
