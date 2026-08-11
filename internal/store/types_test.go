@@ -118,3 +118,31 @@ func TestStringifyID(t *testing.T) {
 		t.Fatal(store.StringifyID("x"))
 	}
 }
+
+func TestBuildProgressSummary(t *testing.T) {
+	progress := map[string]interface{}{
+		"550": map[string]interface{}{
+			"time":         float64(10),
+			"percent":      float64(2),
+			"file_mapping": map[string]interface{}{"f": float64(550)},
+			"updated":      "2026-01-01T00:00:00Z",
+			"device_id":    "d1",
+			"favorite":     map[string]interface{}{"history": []interface{}{}}, // must not leak
+		},
+		"bad": "skip-me",
+	}
+	summary := store.BuildProgressSummary(progress)
+	rec, ok := summary["550"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("%#v", summary)
+	}
+	if store.NumOr(rec["time"], 0) != 10 {
+		t.Fatalf("%v", rec["time"])
+	}
+	if _, leaked := rec["favorite"]; leaked {
+		t.Fatal("favorite must not be in summary")
+	}
+	if _, ok := summary["bad"]; ok {
+		t.Fatal("non-object record should be skipped")
+	}
+}

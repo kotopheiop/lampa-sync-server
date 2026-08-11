@@ -1,8 +1,7 @@
 # Lampa Sync Server (Go)
 
-Сервер синхронизации прогресса и избранного для [Lampa](https://github.com/yumata/lampa).
-
-Плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync)
+Сервер синхронизации прогресса и избранного для [Lampa](https://github.com/yumata/lampa).  
+Написан на **Go** (stdlib HTTP, без фреймворков), плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync).
 
 ## Docker (рекомендуется)
 
@@ -18,7 +17,7 @@ docker compose up -d --build
 
 Данные: `./data` (`progress.json`, `favorite.json`).  
 Порт хоста: `HOST_PORT` в `.env` (внутри контейнера всегда `3000`).  
-Образ ~15–20 MB (static Go binary на Alpine).
+Образ ~14 MB (static Go binary на Alpine). На этапе `docker build` гоняются `go test ./...`.
 
 Остановить: `docker compose down`
 
@@ -33,7 +32,26 @@ go build -o lampa-sync-server ./cmd/lampa-sync-server
 
 Нужен Go 1.22+.
 
-Структура:
+## Тесты
+
+```bash
+go test ./...
+go test ./... -cover
+```
+
+Покрытие (statement coverage, `go test ./... -cover`):
+
+| Пакет | Coverage |
+|-------|----------|
+| `internal/config` | ~88% |
+| `internal/store` | ~72% |
+| `internal/httpserver` | ~69% |
+| **всего по модулю** | **~70%** |
+
+`cmd/` и `version` почти без логики — в покрытие почти не входят.  
+Проверяются: `.env`/config, merge favorite, правила progress (same/other device), миграция legacy favorite, HTTP auth/CORS, `/health` `/ping` `/sync` `/progress` `/favorite` `/plugin.js`.
+
+## Структура
 
 ```text
 cmd/lampa-sync-server/   # точка входа
@@ -41,6 +59,7 @@ internal/config/         # env / .env
 internal/store/          # progress.json + favorite.json
 internal/httpserver/     # HTTP API + middleware
 internal/version/        # версия /ping
+public/plugin.js         # раздача плагина
 ```
 
 ## API (Bearer `SYNC_PASSWORD`)
@@ -57,13 +76,13 @@ internal/version/        # версия /ping
 
 ## Данные
 
-- локально: `DATA_DIR` или рядом с бинарником
+- локально: `DATA_DIR` (по умолчанию текущая папка) → `progress.json`, `favorite.json`
 - в Docker: volume `./data` → `/app/data`
 
 ## Плагин
 
-Положи `plugin.js` в `public/plugin.js`.  
-В Lampa: URL сервера + тот же пароль, что в `.env`.
+Положи `plugin.js` в `public/plugin.js` (в образе уже есть копия).  
+В Lampa: URL сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
 
 ## Доступ с телефона (WSL2 + Windows)
 

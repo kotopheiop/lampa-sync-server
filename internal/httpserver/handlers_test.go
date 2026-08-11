@@ -83,6 +83,17 @@ func TestAuthRequired(t *testing.T) {
 	}
 }
 
+func TestPingOK(t *testing.T) {
+	h := newTestServer(t, "pass")
+	code, out := doJSON(t, h, http.MethodGet, "/ping", "pass", nil)
+	if code != 200 || out["ok"] != true || out["auth"] != true {
+		t.Fatalf("%d %#v", code, out)
+	}
+	if _, ok := out["version"]; !ok {
+		t.Fatalf("missing version: %#v", out)
+	}
+}
+
 func TestProgressLifecycle(t *testing.T) {
 	h := newTestServer(t, "pass")
 	code, out := doJSON(t, h, http.MethodPost, "/progress", "pass", map[string]interface{}{
