@@ -23,10 +23,6 @@ func (s *Server) cors(next http.Handler) http.Handler {
 
 func (s *Server) logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/plugin.js" {
-			next.ServeHTTP(w, r)
-			return
-		}
 		start := time.Now()
 		rw := &statusWriter{ResponseWriter: w, code: http.StatusOK}
 		next.ServeHTTP(rw, r)

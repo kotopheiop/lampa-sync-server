@@ -1,7 +1,10 @@
 # Lampa Sync Server (Go)
 
 Сервер синхронизации прогресса просмотра и избранного между устройствами.  
-Написан на **Go** (stdlib HTTP, без фреймворков). Клиентский плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync).
+Написан на **Go** (stdlib HTTP, без фреймворков).
+
+Клиент (отдельный репозиторий): [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync)  
+Установка плагина: https://kotopheiop.github.io/lampa-sync/plugin.js
 
 ## Docker (рекомендуется)
 
@@ -59,7 +62,6 @@ internal/config/         # env / .env
 internal/store/          # progress.json + favorite.json
 internal/httpserver/     # HTTP API + middleware
 internal/version/        # версия /ping
-public/plugin.js         # раздача плагина
 ```
 
 ## API (Bearer `SYNC_PASSWORD`)
@@ -72,17 +74,16 @@ public/plugin.js         # раздача плагина
 | GET | `/progress?tmdb=` | да | прогресс одной карточки |
 | POST | `/progress` | да | сохранить time/percent/file_id |
 | POST | `/favorite` | да | заменить глобальный favorite |
-| GET | `/plugin.js` | нет | раздача плагина |
 
 ## Данные
 
 - локально: `DATA_DIR` (по умолчанию текущая папка) → `progress.json`, `favorite.json`
 - в Docker: volume `./data` → `/app/data`
 
-## Плагин
+## Клиент
 
-Положи `plugin.js` в `public/plugin.js` (в образе уже есть копия).  
-В клиенте: URL сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
+Плагин ставится отдельно из [lampa-sync](https://github.com/kotopheiop/lampa-sync) (GitHub Pages).  
+В настройках клиента: URL этого сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
 
 ## Доступ с телефона (WSL2 + Windows)
 

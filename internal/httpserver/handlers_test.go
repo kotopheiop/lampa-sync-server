@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/kotopheiop/lampa-sync-server/internal/config"
@@ -25,16 +23,11 @@ func newTestServer(t *testing.T, token string) http.Handler {
 	if err := st.Init(); err != nil {
 		t.Fatal(err)
 	}
-	plugin := filepath.Join(dir, "plugin.js")
-	if err := os.WriteFile(plugin, []byte("/* plugin */"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	cfg := config.Config{
-		Addr:        "127.0.0.1:0",
-		Port:        "0",
-		DataDir:     dir,
-		AuthToken:   token,
-		PluginPaths: []string{plugin},
+		Addr:      "127.0.0.1:0",
+		Port:      "0",
+		DataDir:   dir,
+		AuthToken: token,
 	}
 	return httpserver.New(cfg, st).Handler()
 }
@@ -139,19 +132,6 @@ func TestFavoritePOST(t *testing.T) {
 	}
 }
 
-func TestPluginJS(t *testing.T) {
-	h := newTestServer(t, "pass")
-	req := httptest.NewRequest(http.MethodGet, "/plugin.js", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != 200 {
-		t.Fatalf("code=%d", rr.Code)
-	}
-	if got := rr.Body.String(); got != "/* plugin */" {
-		t.Fatalf("%q", got)
-	}
-}
-
 func TestCORSPreflight(t *testing.T) {
 	h := newTestServer(t, "pass")
 	req := httptest.NewRequest(http.MethodOptions, "/sync", nil)
@@ -186,7 +166,6 @@ func TestMethodNotAllowedAndNotFound(t *testing.T) {
 		{http.MethodPost, "/sync", 405},
 		{http.MethodDelete, "/progress", 405},
 		{http.MethodGet, "/favorite", 405},
-		{http.MethodPost, "/plugin.js", 405},
 		{http.MethodGet, "/progress", 400},
 		{http.MethodGet, "/progress?tmdb=missing", 404},
 	}
@@ -214,29 +193,6 @@ func TestFavoriteValidationAndEmptyAuth(t *testing.T) {
 	}
 }
 
-func TestPluginMissing(t *testing.T) {
-	dir := t.TempDir()
-	st, err := store.New(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := st.Init(); err != nil {
-		t.Fatal(err)
-	}
-	cfg := config.Config{
-		DataDir:     dir,
-		AuthToken:   "pass",
-		PluginPaths: []string{filepath.Join(dir, "nope.js")},
-	}
-	h := httpserver.New(cfg, st).Handler()
-	req := httptest.NewRequest(http.MethodGet, "/plugin.js", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != 404 {
-		t.Fatalf("code=%d", rr.Code)
-	}
-}
-
 func TestProgressMissingTMDB(t *testing.T) {
 	h := newTestServer(t, "pass")
 	code, _ := doJSON(t, h, http.MethodPost, "/progress", "pass", map[string]interface{}{
@@ -247,4 +203,3 @@ func TestProgressMissingTMDB(t *testing.T) {
 		t.Fatalf("code=%d", code)
 	}
 }
-

@@ -19,7 +19,6 @@ RUN apk add --no-cache ca-certificates su-exec \
  && addgroup -S apps && adduser -S apps -G apps
 
 COPY --from=build /out/lampa-sync-server /usr/local/bin/lampa-sync-server
-COPY public ./public
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \

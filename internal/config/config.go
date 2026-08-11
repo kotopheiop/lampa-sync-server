@@ -8,11 +8,10 @@ import (
 
 // Config holds runtime settings for the sync server.
 type Config struct {
-	Addr        string
-	Port        string
-	DataDir     string
-	AuthToken   string
-	PluginPaths []string
+	Addr      string
+	Port      string
+	DataDir   string
+	AuthToken string
 }
 
 // Load reads environment (and optional .env file) into Config.
@@ -29,22 +28,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	exe, _ := os.Executable()
-	exeDir := filepath.Dir(exe)
-	cwd, _ := os.Getwd()
-
 	return Config{
 		Addr:      "0.0.0.0:" + port,
 		Port:      port,
 		DataDir:   abs,
 		AuthToken: strings.TrimSpace(os.Getenv("SYNC_PASSWORD")),
-		PluginPaths: []string{
-			filepath.Join(cwd, "public", "plugin.js"),
-			filepath.Join(exeDir, "public", "plugin.js"),
-			filepath.Join(cwd, "plugin.js"),
-			filepath.Join(exeDir, "plugin.js"),
-			filepath.Join(cwd, "..", "plugin.js"),
-		},
 	}, nil
 }
 

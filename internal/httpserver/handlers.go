@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/kotopheiop/lampa-sync-server/internal/config"
@@ -33,7 +32,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/sync", s.withAuth(s.handleSync))
 	mux.HandleFunc("/progress", s.withAuth(s.handleProgress))
 	mux.HandleFunc("/favorite", s.withAuth(s.handleFavorite))
-	mux.HandleFunc("/plugin.js", s.handlePlugin)
 	return s.cors(s.logRequests(mux))
 }
 
@@ -41,7 +39,6 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) ListenAndServe() error {
 	log.Printf("Lampa Sync server on http://0.0.0.0:%s", s.cfg.Port)
 	log.Printf("Health: http://127.0.0.1:%s/health", s.cfg.Port)
-	log.Printf("Plugin: http://127.0.0.1:%s/plugin.js", s.cfg.Port)
 	log.Printf("Data dir: %s", s.cfg.DataDir)
 	if s.cfg.AuthToken == "" {
 		log.Printf("WARN: SYNC_PASSWORD is empty — set it in .env")
@@ -289,19 +286,4 @@ func (s *Server) handleFavorite(w http.ResponseWriter, r *http.Request) {
 		"history": len(store.AsSlice(saved["history"])),
 		"book":    len(store.AsSlice(saved["book"])),
 	})
-}
-
-func (s *Server) handlePlugin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-		return
-	}
-	for _, p := range s.cfg.PluginPaths {
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-			http.ServeFile(w, r, p)
-			return
-		}
-	}
-	writeJSON(w, http.StatusNotFound, map[string]string{"error": "plugin.js not found"})
 }
