@@ -7,6 +7,6 @@ progress.json
 favorite.json
 *.backup.*
 scripts
-lampa-sync-server
+/lampa-sync-server
 *.exe
 .DS_Store
