@@ -85,6 +85,10 @@ internal/version/        # версия /ping
 Плагин ставится отдельно из [lampa-sync](https://github.com/kotopheiop/lampa-sync) (GitHub Pages).  
 В настройках клиента: URL этого сервера + тот же пароль, что `SYNC_PASSWORD` в `.env`.
 
+Полный sync (`syncAll` / кнопка в шапке):
+- **favorite** — union локального и сервера (`POST /favorite` с `"mode":"merge"`), пустое не затирает полное;
+- **progress** — max time/percent в обе стороны; локальный `file_view` выгружается, если известен TMDB (кэш маппинга / hash названия / `file_mapping` на сервере).
+
 ## Логи и fail2ban
 
 Клиентский IP: `X-Real-IP` → первый `X-Forwarded-For` → `RemoteAddr`.

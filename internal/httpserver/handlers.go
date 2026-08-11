@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/kotopheiop/lampa-sync-server/internal/config"
@@ -262,6 +263,7 @@ func (s *Server) handleFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		Favorite map[string]interface{} `json:"favorite"`
+		Mode     string                 `json:"mode"`
 	}
 	if err := json.Unmarshal(body, &req); err != nil || req.Favorite == nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid favorite object"})
@@ -271,8 +273,17 @@ func (s *Server) handleFavorite(w http.ResponseWriter, r *http.Request) {
 
 	var saved map[string]interface{}
 	err = s.store.WithLock(func() error {
+		fav := req.Favorite
+		if strings.EqualFold(req.Mode, "merge") {
+			existing, e := s.store.ReadFavoriteUnlocked()
+			if e != nil {
+				return e
+			}
+			fav = store.MergeFavorite(existing, req.Favorite)
+			fav["updated"] = req.Favorite["updated"]
+		}
 		var e error
-		saved, e = s.store.WriteFavoriteUnlocked(req.Favorite)
+		saved, e = s.store.WriteFavoriteUnlocked(fav)
 		return e
 	})
 	if err != nil {
@@ -285,5 +296,6 @@ func (s *Server) handleFavorite(w http.ResponseWriter, r *http.Request) {
 		"updated": saved["updated"],
 		"history": len(store.AsSlice(saved["history"])),
 		"book":    len(store.AsSlice(saved["book"])),
+		"mode":    req.Mode,
 	})
 }

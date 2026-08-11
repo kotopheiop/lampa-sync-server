@@ -132,6 +132,61 @@ func TestFavoritePOST(t *testing.T) {
 	}
 }
 
+func TestFavoriteMergeMode(t *testing.T) {
+	h := newTestServer(t, "pass")
+	code, _ := doJSON(t, h, http.MethodPost, "/favorite", "pass", map[string]interface{}{
+		"favorite": map[string]interface{}{
+			"history": []int{1, 2},
+			"book":    []int{3},
+		},
+	})
+	if code != 200 {
+		t.Fatalf("seed code=%d", code)
+	}
+
+	reqBody := map[string]interface{}{
+		"mode": "merge",
+		"favorite": map[string]interface{}{
+			"history": []int{2, 9},
+			"book":    []int{4},
+		},
+	}
+	b, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/favorite", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer pass")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != 200 {
+		t.Fatalf("merge code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]interface{}
+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	if out["history"].(float64) < 3 {
+		t.Fatalf("expected union history>=3 got %#v", out)
+	}
+	if out["book"].(float64) < 2 {
+		t.Fatalf("expected union book>=2 got %#v", out)
+	}
+
+	code, syncOut := doJSON(t, h, http.MethodGet, "/sync", "pass", nil)
+	if code != 200 {
+		t.Fatalf("sync %d", code)
+	}
+	fav := syncOut["favorite"].(map[string]interface{})
+	hist := fav["history"].([]interface{})
+	seen := map[float64]bool{}
+	for _, v := range hist {
+		seen[v.(float64)] = true
+	}
+	for _, id := range []float64{1, 2, 9} {
+		if !seen[id] {
+			t.Fatalf("missing %v in %#v", id, hist)
+		}
+	}
+}
+
+
 func TestCORSPreflight(t *testing.T) {
 	h := newTestServer(t, "pass")
 	req := httptest.NewRequest(http.MethodOptions, "/sync", nil)
