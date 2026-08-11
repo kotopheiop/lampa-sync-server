@@ -1,0 +1,2 @@
+# Плагин лежит в репо только для раздачи /plugin.js — язык сервера Go
+public/plugin.js linguist-vendored
