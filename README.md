@@ -1,6 +1,6 @@
-# Lampa Sync Server
+# Lampa Sync Server (Go)
 
-Сервер синхронизации прогресса и избранного для Lampa.
+Сервер синхронизации прогресса и избранного для [Lampa](https://github.com/yumata/lampa).
 
 Плагин: [kotopheiop/lampa-sync](https://github.com/kotopheiop/lampa-sync)
 
@@ -16,11 +16,9 @@ docker compose up -d --build
 
 Проверка: `http://127.0.0.1:3000/health`
 
-Данные пишутся в `./data` (`progress.json`, `favorite.json`).
-
-Порт на хосте меняется через `HOST_PORT` в `.env` (внутри контейнера всегда `3000`).
-
-Образ ~80 MB (Alpine + системный Node вместо `node:*-alpine` ~140 MB), multi-stage сборка.
+Данные: `./data` (`progress.json`, `favorite.json`).  
+Порт хоста: `HOST_PORT` в `.env` (внутри контейнера всегда `3000`).  
+Образ ~15–20 MB (static Go binary на Alpine).
 
 Остановить: `docker compose down`
 
@@ -28,10 +26,11 @@ docker compose up -d --build
 
 ```bash
 cp .env.example .env
-# отредактируй SYNC_PASSWORD
-npm install
-npm start
+go build -o lampa-sync-server .
+./lampa-sync-server
 ```
+
+Нужен Go 1.22+.
 
 ## API (Bearer `SYNC_PASSWORD`)
 
@@ -47,29 +46,21 @@ npm start
 
 ## Данные
 
-- `progress.json` — прогресс по TMDB id
-- `favorite.json` — история / закладки / списки
-- локально: рядом с `index.js` (или `DATA_DIR`)
+- локально: `DATA_DIR` или рядом с бинарником
 - в Docker: volume `./data` → `/app/data`
 
 ## Плагин
 
-Положи `plugin.js` в `public/plugin.js` (или рядом с `index.js`).  
+Положи `plugin.js` в `public/plugin.js`.  
 В Lampa: URL сервера + тот же пароль, что в `.env`.
 
 ## Доступ с телефона (WSL2 + Windows)
-
-С телефона в той же Wi‑Fi сети:
 
 ```text
 http://<IP-ПК-в-LAN>:3000
 ```
 
-Нужен проброс порта Windows → WSL (IP WSL меняется). Скрипт:
-
 ```powershell
 # от администратора
 .\scripts\windows-portproxy.ps1
 ```
-
-Либо туннель: `ngrok http 3000` и URL вида `https://….ngrok-free.app`.

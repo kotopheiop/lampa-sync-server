@@ -1,23 +1,22 @@
-# ---- deps: install production node_modules ----
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
+# ---- build ----
+FROM golang:1.22-alpine AS build
+WORKDIR /src
+RUN apk add --no-cache ca-certificates
+COPY go.mod ./
+COPY main.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lampa-sync-server .
 
-# ---- runtime: Alpine + системный Node (~50MB вместо ~120MB) ----
+# ---- runtime ----
 FROM alpine:3.21 AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    PORT=3000 \
+ENV PORT=3000 \
     DATA_DIR=/app/data
 
-RUN apk add --no-cache nodejs su-exec \
+RUN apk add --no-cache ca-certificates su-exec \
  && addgroup -S apps && adduser -S apps -G apps
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY package.json ./
-COPY index.js ./
+COPY --from=build /out/lampa-sync-server /usr/local/bin/lampa-sync-server
 COPY public ./public
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
@@ -28,6 +27,6 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+  CMD wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
