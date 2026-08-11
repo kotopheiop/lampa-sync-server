@@ -26,11 +26,22 @@ docker compose up -d --build
 
 ```bash
 cp .env.example .env
-go build -o lampa-sync-server .
+go test ./...
+go build -o lampa-sync-server ./cmd/lampa-sync-server
 ./lampa-sync-server
 ```
 
 Нужен Go 1.22+.
+
+Структура:
+
+```text
+cmd/lampa-sync-server/   # точка входа
+internal/config/         # env / .env
+internal/store/          # progress.json + favorite.json
+internal/httpserver/     # HTTP API + middleware
+internal/version/        # версия /ping
+```
 
 ## API (Bearer `SYNC_PASSWORD`)
 

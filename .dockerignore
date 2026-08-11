@@ -6,10 +6,6 @@ data
 progress.json
 favorite.json
 *.backup.*
-node_modules
-package.json
-package-lock.json
-index.js
 scripts
 lampa-sync-server
 *.exe

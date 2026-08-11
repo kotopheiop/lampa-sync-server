@@ -1,10 +1,12 @@
 # ---- build ----
 FROM golang:1.22-alpine AS build
 WORKDIR /src
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates git
 COPY go.mod ./
-COPY main.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lampa-sync-server .
+COPY cmd ./cmd
+COPY internal ./internal
+RUN CGO_ENABLED=0 GOOS=linux go test ./...
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lampa-sync-server ./cmd/lampa-sync-server
 
 # ---- runtime ----
 FROM alpine:3.21 AS runner
